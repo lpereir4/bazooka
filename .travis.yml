@@ -24,7 +24,7 @@ before_script:
   - "while ! docker info &> /dev/null ; do sleep 1; done"
 
 script:
-  - make devimages web
+  - make
 
 after_success:
   - make push
