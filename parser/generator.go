@@ -33,7 +33,7 @@ func (g *Generator) GenerateDockerfile() error {
 
 	type buildPhase struct {
 		name      string
-		commands  []string
+		commands  []lib.BzkString
 		beforeCmd []string
 		runCmd    []string
 		always    bool
@@ -198,7 +198,7 @@ func (g *Generator) GenerateDockerfile() error {
 	}
 
 	for _, env := range g.Config.Env {
-		envSplit := strings.Split(env, "=")
+		envSplit := strings.Split(string(env), "=")
 		buffer.WriteString(fmt.Sprintf("ENV %s %s\n", envSplit[0], envSplit[1]))
 	}
 
@@ -224,10 +224,10 @@ func (g *Generator) GenerateDockerfile() error {
 	return nil
 }
 
-func archiveCommands(globs lib.Globs) []string {
-	res := make([]string, len(globs))
+func archiveCommands(globs lib.Globs) []lib.BzkString {
+	res := make([]lib.BzkString, len(globs))
 	for i, pat := range globs {
-		res[i] = fmt.Sprintf("cp -R %s /artifacts/", pat)
+		res[i] = lib.BzkString(fmt.Sprintf("cp -R %s /artifacts/", pat))
 	}
 	return res
 }

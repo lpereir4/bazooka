@@ -84,7 +84,7 @@ func manageJdkVersion(counter string, conf *ConfigJava, version, buildTool strin
 	setDefaultInstall(conf, buildTool)
 	setDefaultScript(conf, buildTool)
 	image, err := resolveJdkImage(version)
-	conf.Base.FromImage = image
+	conf.Base.FromImage = bazooka.BzkString(image)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func setDefaultInstall(conf *ConfigJava, buildTool string) {
 	if len(conf.Base.Install) == 0 {
 		instruction := switchDefaultInstall(buildTool)
 		if len(instruction) != 0 {
-			conf.Base.Install = []string{instruction}
+			conf.Base.Install = []bazooka.BzkString{bazooka.BzkString(instruction)}
 		}
 	}
 }
@@ -121,7 +121,7 @@ func switchDefaultInstall(buildTool string) string {
 
 func setDefaultScript(conf *ConfigJava, buildTool string) {
 	if len(conf.Base.Script) == 0 {
-		conf.Base.Script = []string{switchDefaultScript(buildTool)}
+		conf.Base.Script = []bazooka.BzkString{bazooka.BzkString(switchDefaultScript(buildTool))}
 	}
 }
 

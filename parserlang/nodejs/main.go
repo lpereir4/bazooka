@@ -58,7 +58,7 @@ func manageNodejsVersion(counter string, conf *ConfigNodejs, version string) err
 	if err != nil {
 		return err
 	}
-	conf.Base.FromImage = image
+	conf.Base.FromImage = bazooka.BzkString(image)
 
 	setDefaultInstall(conf)
 	setDefaultScript(conf)
@@ -85,12 +85,12 @@ func resolveNodejsImage(version string) (string, error) {
 
 func setDefaultInstall(conf *ConfigNodejs) {
 	if len(conf.Base.Install) == 0 {
-		conf.Base.Install = []string{"npm install"}
+		conf.Base.Install = []bazooka.BzkString{"npm install"}
 	}
 }
 
 func setDefaultScript(conf *ConfigNodejs) {
 	if len(conf.Base.Script) == 0 {
-		conf.Base.Script = []string{"npm test"}
+		conf.Base.Script = []bazooka.BzkString{"npm test"}
 	}
 }

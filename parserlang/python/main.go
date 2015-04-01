@@ -59,7 +59,7 @@ func main() {
 func managePyVersion(counter string, conf *ConfigPython, version string) error {
 	conf.PyVersions = []string{}
 	image, err := resolvePyImage(version)
-	conf.Base.FromImage = image
+	conf.Base.FromImage = bazooka.BzkString(image)
 	if err != nil {
 		return err
 	}

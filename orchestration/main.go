@@ -24,16 +24,17 @@ const (
 	DockerSock     = "/var/run/docker.sock"
 	DockerEndpoint = "unix://" + DockerSock
 
-	BazookaEnvSCM          = "BZK_SCM"
-	BazookaEnvSCMUrl       = "BZK_SCM_URL"
-	BazookaEnvSCMReference = "BZK_SCM_REFERENCE"
-	BazookaEnvSCMKeyfile   = "BZK_SCM_KEYFILE"
-	BazookaEnvProjectID    = "BZK_PROJECT_ID"
-	BazookaEnvJobID        = "BZK_JOB_ID"
-	BazookaEnvHome         = "BZK_HOME"
-	BazookaEnvDockerSock   = "BZK_DOCKERSOCK"
-	BazookaEnvMongoAddr    = "MONGO_PORT_27017_TCP_ADDR"
-	BazookaEnvMongoPort    = "MONGO_PORT_27017_TCP_PORT"
+	BazookaEnvSCM           = "BZK_SCM"
+	BazookaEnvSCMUrl        = "BZK_SCM_URL"
+	BazookaEnvSCMReference  = "BZK_SCM_REFERENCE"
+	BazookaEnvSCMKeyfile    = "BZK_SCM_KEYFILE"
+	BazookaEnvCryptoKeyfile = "BZK_CRYPTO_KEYFILE"
+	BazookaEnvProjectID     = "BZK_PROJECT_ID"
+	BazookaEnvJobID         = "BZK_JOB_ID"
+	BazookaEnvHome          = "BZK_HOME"
+	BazookaEnvDockerSock    = "BZK_DOCKERSOCK"
+	BazookaEnvMongoAddr     = "MONGO_PORT_27017_TCP_ADDR"
+	BazookaEnvMongoPort     = "MONGO_PORT_27017_TCP_PORT"
 )
 
 func init() {
@@ -51,14 +52,15 @@ func main() {
 	defer connector.Close()
 
 	env := map[string]string{
-		BazookaEnvSCM:          os.Getenv(BazookaEnvSCM),
-		BazookaEnvSCMUrl:       os.Getenv(BazookaEnvSCMUrl),
-		BazookaEnvSCMReference: os.Getenv(BazookaEnvSCMReference),
-		BazookaEnvSCMKeyfile:   os.Getenv(BazookaEnvSCMKeyfile),
-		BazookaEnvProjectID:    os.Getenv(BazookaEnvProjectID),
-		BazookaEnvJobID:        os.Getenv(BazookaEnvJobID),
-		BazookaEnvHome:         os.Getenv(BazookaEnvHome),
-		BazookaEnvDockerSock:   os.Getenv(BazookaEnvDockerSock),
+		BazookaEnvSCM:           os.Getenv(BazookaEnvSCM),
+		BazookaEnvSCMUrl:        os.Getenv(BazookaEnvSCMUrl),
+		BazookaEnvSCMReference:  os.Getenv(BazookaEnvSCMReference),
+		BazookaEnvSCMKeyfile:    os.Getenv(BazookaEnvSCMKeyfile),
+		BazookaEnvCryptoKeyfile: os.Getenv(BazookaEnvCryptoKeyfile),
+		BazookaEnvProjectID:     os.Getenv(BazookaEnvProjectID),
+		BazookaEnvJobID:         os.Getenv(BazookaEnvJobID),
+		BazookaEnvHome:          os.Getenv(BazookaEnvHome),
+		BazookaEnvDockerSock:    os.Getenv(BazookaEnvDockerSock),
 	}
 
 	var containerLogger Logger = func(image string, variantID string, container *docker.Container) {
@@ -110,12 +112,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Printf("Key is at: %s", env[BazookaEnvCryptoKeyfile])
 	p := &Parser{
 		MongoConnector: connector,
 		Options: &ParseOptions{
 			InputFolder:    checkoutFolder,
 			OutputFolder:   fmt.Sprintf(WorkdirFolderPattern, env[BazookaEnvHome]),
 			DockerSock:     env[BazookaEnvDockerSock],
+			CryptoKeyFile:  env[BazookaEnvCryptoKeyfile],
 			HostBaseFolder: checkoutFolder,
 			MetaFolder:     metaFolder,
 			Env:            env,

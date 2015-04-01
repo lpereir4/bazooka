@@ -11,7 +11,7 @@ import (
 	bzklog "github.com/bazooka-ci/bazooka/commons/logs"
 	"github.com/bazooka-ci/bazooka/commons/matrix"
 
-	bazooka "github.com/bazooka-ci/bazooka/commons"
+	"github.com/bazooka-ci/bazooka/commons"
 )
 
 const (
@@ -60,7 +60,7 @@ func manageGoVersion(counter string, conf *ConfigGolang, version string) error {
 		return err
 	}
 	image, err := resolveGoImage(version)
-	conf.Base.FromImage = image
+	conf.Base.FromImage = bazooka.BzkString(image)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func setGodir(conf *ConfigGolang) {
 
 func setDefaultInstall(conf *ConfigGolang) {
 	if len(conf.Base.Install) == 0 {
-		conf.Base.Install = []string{"go get -d -t -v ./... && go build -v ./..."}
+		conf.Base.Install = []bazooka.BzkString{"go get -d -t -v ./... && go build -v ./..."}
 	}
 }
 
@@ -147,12 +147,12 @@ func setDefaultScript(conf *ConfigGolang) error {
 	if len(conf.Base.Script) == 0 {
 		if _, err := os.Open(fmt.Sprintf("%s/Makefile", SourceFolder)); err != nil {
 			if os.IsNotExist(err) {
-				conf.Base.Script = []string{"go test -v ./..."}
+				conf.Base.Script = []bazooka.BzkString{"go test -v ./..."}
 				return nil
 			}
 			return err
 		}
-		conf.Base.Script = []string{"make"}
+		conf.Base.Script = []bazooka.BzkString{"make"}
 	}
 	return nil
 }
@@ -177,11 +177,11 @@ func resolveGoImage(version string) (string, error) {
 	return "", fmt.Errorf("Unable to find Bazooka Docker Image for Go Runnner %s\n", version)
 }
 
-func flattenEnvMap(mapp map[string][]string) []string {
-	res := []string{}
+func flattenEnvMap(mapp map[string][]string) []bazooka.BzkString {
+	res := []bazooka.BzkString{}
 	for key, values := range mapp {
 		for _, value := range values {
-			res = append(res, fmt.Sprintf("%s=%s", key, value))
+			res = append(res, bazooka.BzkString(fmt.Sprintf("%s=%s", key, value)))
 		}
 	}
 	return res

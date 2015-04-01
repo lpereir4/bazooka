@@ -33,6 +33,7 @@ func (p *LanguageParser) Parse() error {
 			fmt.Sprintf("%s/source/:/bazooka", bazookaHome),
 			fmt.Sprintf("%s/work/:/bazooka-output", bazookaHome),
 			fmt.Sprintf("%s/meta/:/meta", bazookaHome),
+			fmt.Sprintf("%s/crypto-key:/bazooka-cryptokey", bazookaHome),
 		},
 		Detach: true,
 	})

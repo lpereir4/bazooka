@@ -1,8 +1,14 @@
 package bazooka
 
 import (
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"time"
+)
+
+const (
+	CRYPTOKEYFILE = "/bazooka-cryptokey"
 )
 
 type Project struct {
@@ -119,7 +125,7 @@ type User struct {
 }
 
 type Config struct {
-	Language       string       `yaml:"language"`
+	Language       BzkString    `yaml:"language"`
 	Setup          Commands     `yaml:"setup,omitempty"`
 	BeforeInstall  Commands     `yaml:"before_install,omitempty"`
 	Install        Commands     `yaml:"install,omitempty"`
@@ -128,16 +134,16 @@ type Config struct {
 	AfterScript    Commands     `yaml:"after_script,omitempty"`
 	AfterSuccess   Commands     `yaml:"after_success,omitempty"`
 	AfterFailure   Commands     `yaml:"after_failure,omitempty"`
-	Services       []string     `yaml:"services,omitempty"`
-	Env            []string     `yaml:"env,omitempty"`
-	FromImage      string       `yaml:"from"`
+	Services       []BzkString  `yaml:"services,omitempty"`
+	Env            []BzkString  `yaml:"env,omitempty"`
+	FromImage      BzkString    `yaml:"from"`
 	Matrix         ConfigMatrix `yaml:"matrix,omitempty"`
 	Archive        Globs        `yaml:"archive,omitempty"`
 	ArchiveSuccess Globs        `yaml:"archive_success,omitempty"`
 	ArchiveFailure Globs        `yaml:"archive_failure,omitempty"`
 }
 
-type Commands []string
+type Commands []BzkString
 
 func (c *Commands) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw interface{}
@@ -147,24 +153,30 @@ func (c *Commands) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	switch convCmd := raw.(type) {
 	case string:
-		*c = []string{convCmd}
+	case map[interface{}]interface{}:
+		bzkStr, err := extractBzkString(raw)
+		if err != nil {
+			return err
+		}
+		*c = []BzkString{bzkStr}
 		return nil
 	case []interface{}:
-		*c = make([]string, len(convCmd))
+		*c = make([]BzkString, len(convCmd))
 		for i, rawCmd := range convCmd {
-			cmd, ok := rawCmd.(string)
-			if !ok {
-				return fmt.Errorf("Command list (install, script, ...) can only contain strings")
+			bzkStr, err := extractBzkString(rawCmd)
+			if err != nil {
+				return err
 			}
-			(*c)[i] = cmd
+			(*c)[i] = bzkStr
 		}
 		return nil
 	default:
 		return fmt.Errorf("Commands (install, script, ...) can be either a string or a list of strings")
 	}
+	return nil
 }
 
-type Globs []string
+type Globs []BzkString
 
 func (g *Globs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw interface{}
@@ -174,21 +186,101 @@ func (g *Globs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	switch convGlob := raw.(type) {
 	case string:
-		*g = []string{convGlob}
+	case map[interface{}]interface{}:
+		bzkStr, err := extractBzkString(raw)
+		if err != nil {
+			return err
+		}
+		*g = []BzkString{bzkStr}
 		return nil
 	case []interface{}:
-		*g = make([]string, len(convGlob))
+		*g = make([]BzkString, len(convGlob))
 		for i, rawGlob := range convGlob {
-			glob, ok := rawGlob.(string)
-			if !ok {
-				return fmt.Errorf("Globs (archive, archive_success, archive_failure) can only contain strings")
+			bzkStr, err := extractBzkString(rawGlob)
+			if err != nil {
+				return err
 			}
-			(*g)[i] = glob
+			(*g)[i] = bzkStr
 		}
 		return nil
 	default:
 		return fmt.Errorf("Globs (archive, archive_success, archive_failure) can be either a tring or a list of strings")
 	}
+	return nil
+}
+
+type BzkString string
+
+func (c *BzkString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw interface{}
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	bzkStr, err := extractBzkString(raw)
+	if err != nil {
+		return err
+	}
+	*c = bzkStr
+	return nil
+}
+
+func extractBzkString(raw interface{}) (BzkString, error) {
+	switch convCmd := raw.(type) {
+	case string:
+		return BzkString(convCmd), nil
+	case map[interface{}]interface{}:
+		if len(convCmd) > 1 {
+			return "", fmt.Errorf("BzkString should either be a go string or 'secure: <string>'")
+		}
+		if _, ok := convCmd["secure"]; !ok {
+			return "", fmt.Errorf("BzkString should either be a go string or 'secure: <string>'")
+		}
+
+		decrypted, err := decryptBzkString(convCmd["secure"].(string))
+		if err != nil {
+			return "", fmt.Errorf("Error while trying to decrypt data, reason is: %v\n", err)
+		}
+
+		return BzkString(decrypted), nil
+	default:
+		return "", fmt.Errorf("BzkString should either be a go string or 'secure: <string>'")
+	}
+}
+
+func decryptBzkString(str string) ([]byte, error) {
+	key, err := readCryptoKey()
+	if err != nil {
+		return nil, err
+	}
+
+	toDecryptDataAsHex, err := hex.DecodeString(string(str))
+	if err != nil {
+		return nil, fmt.Errorf("Unable to decode string as hexa data, reason is: %v\n", err)
+	}
+
+	decrypted, err := Decrypt(key, toDecryptDataAsHex)
+	if err != nil {
+		return nil, fmt.Errorf("Error while trying to decrypt data, reason is: %v\n", err)
+	}
+	return decrypted, nil
+}
+
+func readCryptoKey() ([]byte, error) {
+	exists, err := FileExists(CRYPTOKEYFILE)
+	if err != nil {
+		return nil, fmt.Errorf("Error while trying to check existence of file: %s, reason is: %v\n", CRYPTOKEYFILE, err)
+	}
+
+	if !exists {
+		return nil, fmt.Errorf("Your bazooka config contains secured data but the keyfile can not be found at %s, reason is: %v\n", CRYPTOKEYFILE, err)
+	}
+
+	key, err := ioutil.ReadFile(CRYPTOKEYFILE)
+	if err != nil {
+		return nil, fmt.Errorf("Error while reading crypto key file: %s, reason is: %v\n", CRYPTOKEYFILE, err)
+	}
+	return key, nil
 }
 
 type ConfigMatrix struct {
@@ -244,5 +336,11 @@ func (t *YamlTime) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type SSHKey struct {
 	ID        string `bson:"id" json:"id"`
 	Content   string `bson:"content" json:"content"`
+	ProjectID string `bson:"project_id" json:"project_id"`
+}
+
+type CryptoKey struct {
+	ID        string `bson:"id" json:"id"`
+	Content   []byte `bson:"content" json:"content"`
 	ProjectID string `bson:"project_id" json:"project_id"`
 }
