@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 
 	log "github.com/Sirupsen/logrus"
 	lib "github.com/bazooka-ci/bazooka/commons"
@@ -52,8 +53,26 @@ func (p *context) createProject(params map[string]string, body bodyFunc) (*respo
 	if err = p.Connector.AddProject(&project); err != nil {
 		return nil, err
 	}
+	cryptoKey := &lib.CryptoKey{
+		Content:   []byte(randSeq(32)),
+		ProjectID: project.ID,
+	}
+
+	if err = p.Connector.AddCryptoKey(cryptoKey); err != nil {
+		return nil, err
+	}
 
 	return created(&project, "/project/"+project.ID)
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 func (p *context) getProject(params map[string]string, body bodyFunc) (*response, error) {

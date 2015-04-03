@@ -344,3 +344,7 @@ type CryptoKey struct {
 	Content   []byte `bson:"content" json:"content"`
 	ProjectID string `bson:"project_id" json:"project_id"`
 }
+
+type StringValue struct {
+	Value string `bson:"value" json:"value"`
+}

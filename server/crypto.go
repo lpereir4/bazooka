@@ -1,20 +1,22 @@
 package main
 
 import (
+	"encoding/hex"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/bazooka-ci/bazooka/commons"
 )
 
-func (c *context) addCryptoKey(params map[string]string, body bodyFunc) (*response, error) {
-	var key bazooka.CryptoKey
+func (c *context) encryptData(params map[string]string, body bodyFunc) (*response, error) {
+	var v bazooka.StringValue
 
-	body(&key)
+	body(&v)
 
-	if len(key.Content) == 0 {
-		return badRequest("content is mandatory")
+	if len(v.Value) == 0 {
+		return badRequest("value is mandatory")
 	}
 
-	project, err := c.Connector.GetProjectById(params["id"])
+	_, err := c.Connector.GetProjectById(params["id"])
 	if err != nil {
 		if err.Error() != "not found" {
 			return nil, err
@@ -27,57 +29,20 @@ func (c *context) addCryptoKey(params map[string]string, body bodyFunc) (*respon
 		return nil, err
 	}
 
-	if len(keys) > 0 {
-		return conflict("A key is already associated with this project")
+	if len(keys) == 0 {
+		return notFound("Crypto Key not found")
 	}
 
-	key.ProjectID = project.ID
+	keyContent := keys[0].Content
 
-	log.WithFields(log.Fields{
-		"key": key,
-	}).Debug("Adding key")
-
-	if err = c.Connector.AddCryptoKey(&key); err != nil {
-		return nil, err
-	}
-
-	createdKey := &bazooka.CryptoKey{
-		ProjectID: key.ProjectID,
-	}
-
-	return created(&createdKey, "/project/"+params["id"]+"/key")
-}
-
-func (c *context) updateCryptoKey(params map[string]string, body bodyFunc) (*response, error) {
-	var key bazooka.CryptoKey
-
-	body(&key)
-
-	if len(key.Content) == 0 {
-		return badRequest("content is mandatory")
-	}
-
-	project, err := c.Connector.GetProjectById(params["id"])
+	encrypted, err := bazooka.Encrypt(keyContent, []byte(v.Value))
 	if err != nil {
-		if err.Error() != "not found" {
-			return nil, err
-		}
-		return notFound("project not found")
+		log.Fatal(err)
 	}
 
-	key.ProjectID = project.ID
-
-	log.WithFields(log.Fields{
-		"key": key,
-	}).Debug("Updating key")
-
-	if err = c.Connector.UpdateCryptoKey(project.ID, &key); err != nil {
-		return nil, err
+	encryptedData := &bazooka.StringValue{
+		Value: hex.EncodeToString(encrypted),
 	}
 
-	updateKey := &bazooka.CryptoKey{
-		ProjectID: key.ProjectID,
-	}
-
-	return ok(&updateKey)
+	return ok(&encryptedData)
 }
