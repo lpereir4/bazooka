@@ -1,8 +1,8 @@
 language: golang
 install:
+  - wget -qO- https://get.docker.com/ | sh
   - curl -sL https://deb.nodesource.com/setup | bash -
   - apt-get install -y nodejs
-  - wget -qO- https://get.docker.com/ | sh
   - npm install -g gulp
   - npm install -g bower
   - make setup
@@ -11,5 +11,25 @@ script:
   - go test -v ./...
   - make errcheck
 after_success:
-  # TODO add web when Dockerfile is done
   - make images push
+  - go get github.com/mitchellh/gox
+  - gox -build-toolchain
+  - gox -os="linux" github.com/bazooka-ci/bazooka/cli/bzk
+  - gox -os="darwin" github.com/bazooka-ci/bazooka/cli/bzk
+  - curl -u $BINTRAY_USER:$BINTRAY_API_KEY --data-binary "@cli/bzk_linux_amd64" -X PUT $BINTRAY_PATH/bzk_linux_amd64/bzk\?publish\=1\&override\=1
+  - curl -u $BINTRAY_USER:$BINTRAY_API_KEY --data-binary "@cli/bzk_linux_386" -X PUT $BINTRAY_PATH/bzk_linux_amd64/bzk\?publish\=1\&override\=1
+  - curl -u $BINTRAY_USER:$BINTRAY_API_KEY --data-binary "@cli/bzk_linux_arm" -X PUT $BINTRAY_PATH/bzk_linux_amd64/bzk\?publish\=1\&override\=1
+  - curl -u $BINTRAY_USER:$BINTRAY_API_KEY --data-binary "@cli/bzk_darwin_386" -X PUT $BINTRAY_PATH/bzk_linux_amd64/bzk\?publish\=1\&override\=1
+  - curl -u $BINTRAY_USER:$BINTRAY_API_KEY --data-binary "@cli/bzk_darwin_amd64" -X PUT $BINTRAY_PATH/bzk_linux_amd64/bzk\?publish\=1\&override\=1
+env:
+  - BINTRAY_PATH=https://api.bintray.com/content/bazooka/bazooka/bzk/nightly/
+  # DOCKER_USERNAME=****
+  - secure: b13fe00f507cbaf7a6e204aa184552ae51e6848293f3d6ba94f375a8a4ec8887b45996ebf771f44973eaf00d08aa5dd1f5a5ed26
+  # DOCKER_PASSWORD=****
+  - secure: db67e5dfb3ee879cbb9ffcf413ad02dd30aed5c4fc25f071d3f4a61a2dfeafc471ab554413a42fc95e47388d1cec6a597402b7d7
+  # DOCKER_EMAIL=****
+  - secure: acaaba3de733f222ea5382445ec420a2c5a1f7d85f2f1e299ae28f2553cadd66e92bcdcac27e656a5fc13adf375ab7683655dd27a37caa376c0548ef
+  # BINTRAY_USER=****
+  - secure: e8c4b846498c3b408279f3b5440144234f03eac65a801f33feb500593b03bd069ebe8eb8d7d00ed57d33661889e5754a
+  # BINTRAY_API_KEY=****
+  - secure: d11b084592fed5ecd744297c14a0f4dbdb7ae33f94c773569bcd153730c9bd3d04413b6ed258d3845ad9f7715403c88d918f713a6d622e6c3cb201026039db162b2936b503fc64bbbfacc1f0027b4c216b68a0b50947805bf93aaf9a

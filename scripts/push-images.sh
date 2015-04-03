@@ -1,13 +1,12 @@
 #!/bin/bash
 
-set -e
+set -ev
 
-docker_projects=( "parser" "parserlang/golang" "parserlang/java" "parserlang/python" "parserlang/nodejs" "orchestration" \
-"server" "web")
+docker_projects=( "parser" "parser-golang" "parser-java" "parser-python" "parser-nodejs" "orchestration" "server" "web" )
+
+docker login -e "$DOCKER_EMAIL" -p "$DOCKER_PASSWORD" -u "$DOCKER_USERNAME"
 
 for project in "${docker_projects[@]}"
 do
-  pushd "${GOPATH//:}/src/github.com/bazooka-ci/bazooka/$project"
-  make push
-  popd
+  docker push "bazooka/$project"
 done
