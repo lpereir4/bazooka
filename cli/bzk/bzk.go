@@ -48,9 +48,7 @@ func main() {
 		cmd.Command("create", "Create a new bazooka user", createUserCommand)
 	})
 
-	app.Command("encrypt", "Encrypt some data", encryptText)
-	app.Command("decrypt", "Decrypt some data", decryptText)
-	app.Command("generate-key", "Generate a new key used to encrypt some data", generateKey)
+	app.Command("encrypt", "Encrypt some data", encryptData)
 
 	app.Command("run", "Run bazooka", run)
 

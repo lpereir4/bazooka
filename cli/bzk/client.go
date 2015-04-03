@@ -205,32 +205,26 @@ func (c *Client) UpdateKey(projectID, keyPath string) (*lib.SSHKey, error) {
 	return updatedKey, err
 }
 
-func (c *Client) AddCryptoKey(projectID, keyPath string) (*lib.CryptoKey, error) {
-	fileContent, err := ioutil.ReadFile(keyPath)
+func (c *Client) EncryptData(projectID, toEncryptString string) (string, error) {
+	toEncryptData := &lib.StringValue{
+		Value: toEncryptString,
+	}
+
+	requestURL, err := c.getRequestURL(fmt.Sprintf("project/%s/crypto", url.QueryEscape(projectID)))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	sshKey := &lib.CryptoKey{
-		ProjectID: projectID,
-		Content:   []byte(fileContent),
-	}
+	encryptedData := &lib.StringValue{}
 
-	requestURL, err := c.getRequestURL(fmt.Sprintf("project/%s/cryptokey", url.QueryEscape(projectID)))
-	if err != nil {
-		return nil, err
-	}
-
-	createdKey := &lib.CryptoKey{}
-
-	err = perigee.Post(requestURL, perigee.Options{
-		ReqBody:    &sshKey,
-		Results:    &createdKey,
-		OkCodes:    []int{201},
+	err = perigee.Put(requestURL, perigee.Options{
+		ReqBody:    &toEncryptData,
+		Results:    &encryptedData,
+		OkCodes:    []int{200},
 		SetHeaders: c.authenticateRequest,
 	})
 
-	return createdKey, err
+	return encryptedData.Value, err
 }
 
 func (c *Client) JobLog(jobID string) ([]lib.LogEntry, error) {
